@@ -1,0 +1,8 @@
+services:
+  python:
+    restart: always
+    build: ./python
+    container_name: python
+    volumes:
+      - ./src:/app
+    tty: true
