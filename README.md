@@ -14,7 +14,8 @@ Hackason-Toyono $ docker compose up --build -d
 ```shell
 Hackason-Toyono $ docker exec -it toyono-hackathon-python bash 
 ```
-4. コンテナの中でプログラム動かしてみる
+4. コンテナの中でプログラム動かしてみる．
+
 表示内容人によって違うかも．
 ```shell
 root@9c0d9ce5907d:/app# ls
