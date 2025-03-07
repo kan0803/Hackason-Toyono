@@ -2,7 +2,7 @@ services:
   python:
     restart: always
     build: ./python
-    container_name: python
+    container_name: toyono-hackathon-python
     volumes:
       - ./src:/app
     tty: true
