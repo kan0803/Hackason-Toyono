@@ -8,6 +8,7 @@
 - python
 - fastAPIとopenCVが最低限入っています
 - 割り当てポートは8000
+- moduleディレクトリ内でいい感じの関数実装してもらったら，APIにその関数を割り当てたら叩けるようになります．
 
 # 起動方法と確認方法(Vue＋FastAPI+nginx全体の立ち上げ)
 1. DockerDesktop起動
@@ -22,6 +23,14 @@ Hackason-Toyono $ docker compose up --build
 - localhost:8000
   - hello world的なやつが表示されればおk
 
+# CLIからコンテナに入る方法
+pythonを叩きたい時，サーバーの中で何かを確認したいときなど
+```
+$ docker exec -it <コンテナ名 or コンテナID> bash
+例）　docker exec -it hackason-toyono-backend bash
+```
+
+
 # フロントからバックを叩くには
 localhost/api/<backendのパス>
-っていう感じで
+っていう感じで叩けます．
