@@ -14,7 +14,7 @@ const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
     <template #icon>
       <DocumentationIcon />
     </template>
-    <a href="localhost:8000/" target="_blank" rel="noopener">api test</a>
+    <a href="/api/" target="_blank" rel="noopener">api test</a>
 
     <template #heading>Documentation</template>
     Vue’s
