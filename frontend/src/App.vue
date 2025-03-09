@@ -1,85 +1,63 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import { ref, onMounted } from 'vue';
+
+const videos = ref<{ text: string; value: string }[]>([]);
+const selectedVideo = ref('');
+const videoElement = ref<HTMLVideoElement | null>(null);
+
+const getCameraDevices = async () => {
+  try {
+    const deviceInfos = await navigator.mediaDevices.enumerateDevices();
+    videos.value = deviceInfos
+      .filter(deviceInfo => deviceInfo.kind === 'videoinput')
+      .map((video, index) => ({
+        text: video.label || `Camera ${index + 1}`,
+        value: video.deviceId
+      }));
+  } catch (error) {
+    console.error("カメラデバイスの取得に失敗しました: ", error);
+  }
+};
+
+const connectLocalCamera = async () => {
+  if (!selectedVideo.value) return;
+
+  try {
+    const constraints = {
+      video: { deviceId: { exact: selectedVideo.value } }
+    };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    if (videoElement.value) {
+      videoElement.value.srcObject = stream;
+    }
+  } catch (error) {
+    console.error("カメラ接続エラー: ", error);
+  }
+};
+
+onMounted(getCameraDevices);
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
-
-  <RouterView />
+  <div  class="camera">
+    <p>
+      カメラ: 
+      <select v-model="selectedVideo" @change="connectLocalCamera">
+        <option disabled value="">Please select one</option>
+        <option v-for="video in videos" :key="video.value" :value="video.value">
+          {{ video.text }}
+        </option>
+      </select>
+    </p>
+    <video ref="videoElement" muted="true" width="1000" autoplay playsinline></video>
+  </div>
 </template>
 
+
+
 <style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+.camera {
+  flex-direction: column;
 }
 </style>
