@@ -1,0 +1,9 @@
+version: "3"
+agent:
+  authtoken: "2RgUYWgoWikepECGkJVsmaMTjvM_3CkAkhWHcyRKXfyZhsbcD"
+tunnels:
+  nginx:
+    proto: http
+    addr: frontend:8080 #ここに接続したいサービス
+    host_header: rewrite
+
