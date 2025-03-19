@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 
 const videos = ref<{ text: string; value: string }[]>([]);
 const selectedVideo = ref('');
@@ -104,9 +104,43 @@ onUnmounted(() => {
     ws.value.close();
   }
 });
+
+const videoRef = ref<HTMLVideoElement | null>(null);
+const isPlaying = ref(false);
+
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter' && !isPlaying.value) {
+    isPlaying.value = true;
+    nextTick(() => {
+      if (videoRef.value) {
+        videoRef.value.requestFullscreen?.(); // オプショナルチェーンで安全に呼び出す
+        videoRef.value.play();
+      }
+    });
+  } else if (event.key === 'Escape' && isPlaying.value) {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+    isPlaying.value = false;
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+});
 </script>
 
 <template>
+  <div>
+    <video v-if="isPlaying" ref="videoRef" class="fullscreen-video">
+      <source src="../movie/mp4/shutter_unClear.mp4" type="video/mp4">
+      お使いのブラウザは動画タグをサポートしていません。
+    </video>
+  </div>
   <div class="camera">
     <p>
       カメラ:
@@ -134,5 +168,15 @@ video {
   width: 640px;
   height: 480px;
   border: 1px solid black;
+}
+
+.fullscreen-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  background: black;
 }
 </style>
