@@ -92,6 +92,35 @@ def detect_peace_sign(frame):
             return True, cnt  # ピースサイン検出
     return False, None
 
+def detect_hand_sign(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    _, thresh = cv2.threshold(blur, 60, 255, cv2.THRESH_BINARY_INV)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for cnt in contours:
+        if len(cnt) < 5:
+            continue
+
+        hull = cv2.convexHull(cnt, returnPoints=False)
+
+        if hull.shape[0] < 4:
+            continue
+        
+        defects = cv2.convexityDefects(cnt, hull)
+
+        if defects is not None:
+            defect_count = len(defects)
+            if defect_count == 2:
+                return "Peace", cnt  # ピースサイン
+            elif defect_count == 0:
+                return "Fist", cnt  # グー
+            elif defect_count == 1:
+                return "Scissors", cnt  # チョキ
+            elif defect_count > 2:
+                return "Open Hand", cnt  # パー
+    
+    return "No Hand", None  # 手形が見つからない場合
 
 @app.websocket("/video_feed")
 async def video_feed(websocket: WebSocket):
@@ -109,23 +138,12 @@ async def video_feed(websocket: WebSocket):
                 img_data = base64.b64decode(data["image"].split(',')[1])  
                 np_array = np.frombuffer(img_data, dtype=np.uint8)
                 frame = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-                frame = cv2.resize(frame, (1920, 1080))
 
                 if frame is not None:
-                    detected, contour = detect_peace_sign(frame)
+                    hand_sign, contour = detect_hand_sign(frame)
 
-                    #透過toyononIMGを重ねる
-                    frame = overlay_image(frame, toyonon_img, position=(frame.shape[1] - toyonon_img.shape[1] - 10, frame.shape[0] - toyonon_img.shape[0] - 10))
-
-                    if detected:
-                        cv2.putText(frame, "Peace Sign Detected!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                        print("ピースサイン検出！")
-                    else:
-                        cv2.putText(frame, "No Peace Sign", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-
-                    _, buffer = cv2.imencode('.jpg', frame)
-                    processed_image = base64.b64encode(buffer).decode('utf-8')
-                    response = json.dumps({"image": f"data:image/jpeg;base64,{processed_image}"})
+                    # 判定結果を送信
+                    response = json.dumps({"hand_sign": hand_sign})
                     await websocket.send_text(response)
             except Exception as e:
                 print(f"エラー: {e}")

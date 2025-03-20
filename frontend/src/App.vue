@@ -6,6 +6,7 @@ const selectedVideo = ref('');
 const videoElement = ref<HTMLVideoElement | null>(null);
 const canvasElement = ref<HTMLCanvasElement | null>(null);
 const processedImage = ref<HTMLImageElement | null>(null);
+const handSignText = ref('');
 const ws = ref<WebSocket | null>(null);
 
 const getCameraDevices = async () => {
@@ -54,19 +55,21 @@ const startWebSocket = () => {
   ws.value.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      if (data.image && processedImage.value) {
-        processedImage.value.src = data.image; // `<img>` に表示
+
+      // 画像データを受け取る場合
+      //if (data.image && processedImage.value) {
+      //  processedImage.value.src = data.image; // `<img>` に表示
+      //}
+
+      // 手の形（hand_sign）を受け取る場合
+      if (data.hand_sign) {
+        console.log(`検出された手の形: ${data.hand_sign}`);
+        // 例えば、手の形を表示するUIに反映させる
+        handSignText.value = data.hand_sign; // 手の形を表示するための変数
       }
     } catch (error) {
       console.error("受信データの解析エラー: ", error);
     }
-    // try {
-    //   const data = JSON.parse(event.data); // ここで JSON.parse を適用
-    //     const imageSrc = `data:image/jpeg;base64,${data.image}`;
-    //     document.getElementById("webcam-feed").src = imageSrc;
-    // } catch (error) {
-    //     console.error("受信データの解析エラー:", error);
-    // }
   };
 
   ws.value.onerror = (error) => {
@@ -119,8 +122,7 @@ onUnmounted(() => {
     </p>
     <video ref="videoElement" muted autoplay playsinline></video>
     <canvas ref="canvasElement" width="640" height="480" style="display: none"></canvas>
-    <p>加工済み映像:</p>
-    <img ref="processedImage" />
+    <p>現在の手の形: {{ handSignText }}</p>
   </div>
 </template>
 
