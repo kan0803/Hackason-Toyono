@@ -1,138 +1,68 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 
-const videos = ref<{ text: string; value: string }[]>([]);
-const selectedVideo = ref('');
-const videoElement = ref<HTMLVideoElement | null>(null);
-const canvasElement = ref<HTMLCanvasElement | null>(null);
-const processedImage = ref<HTMLImageElement | null>(null);
-const ws = ref<WebSocket | null>(null);
+const videoRef = ref<HTMLVideoElement | null>(null);
+const isPlaying = ref(false);
 
-const getCameraDevices = async () => {
-  try {
-    const deviceInfos = await navigator.mediaDevices.enumerateDevices();
-    videos.value = deviceInfos
-      .filter(deviceInfo => deviceInfo.kind === 'videoinput')
-      .map((video, index) => ({
-        text: video.label || `Camera ${index + 1}`,
-        value: video.deviceId
-      }));
-  } catch (error) {
-    console.error("カメラデバイスの取得に失敗しました: ", error);
-  }
-};
-
-const connectLocalCamera = async () => {
-  if (!selectedVideo.value) return;
-
-  try {
-    const constraints = { video: { deviceId: { exact: selectedVideo.value } } };
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-    if (videoElement.value) {
-      videoElement.value.srcObject = stream;
-    }
-
-    startWebSocket();
-  } catch (error) {
-    console.error("カメラ接続エラー: ", error);
-  }
-};
-
-const startWebSocket = () => {
-  if (ws.value) {
-    ws.value.close();
-  }
-
-  ws.value = new WebSocket("ws://localhost:8000/video_feed");
-
-  ws.value.onopen = () => {
-    console.log("WebSocket接続成功");
-    startStreaming();
-  };
-
-  ws.value.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.image && processedImage.value) {
-        processedImage.value.src = data.image; // `<img>` に表示
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter' && !isPlaying.value) {
+    isPlaying.value = true;
+    nextTick(() => {
+      if (videoRef.value) {
+        videoRef.value.requestFullscreen?.(); // オプショナルチェーンで安全に呼び出す
+        videoRef.value.play();
       }
-    } catch (error) {
-      console.error("受信データの解析エラー: ", error);
+    });
+  } else if (event.key === 'Escape' && isPlaying.value) {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
     }
-    // try {
-    //   const data = JSON.parse(event.data); // ここで JSON.parse を適用
-    //     const imageSrc = `data:image/jpeg;base64,${data.image}`;
-    //     document.getElementById("webcam-feed").src = imageSrc;
-    // } catch (error) {
-    //     console.error("受信データの解析エラー:", error);
-    // }
-  };
-
-  ws.value.onerror = (error) => {
-    console.error("WebSocketエラー: ", error);
-  };
-
-  ws.value.onclose = () => {
-    console.log("WebSocket接続終了");
-  };
-};
-
-const startStreaming = () => {
-  if (!canvasElement.value || !videoElement.value || !ws.value) return;
-
-  const ctx = canvasElement.value.getContext('2d');
-  if (!ctx) return;
-
-  const sendFrame = () => {
-    if (!videoElement.value || !canvasElement.value || !ws.value || ws.value.readyState !== WebSocket.OPEN) return;
-
-    ctx.drawImage(videoElement.value, 0, 0, canvasElement.value.width, canvasElement.value.height);
-    const imageData = canvasElement.value.toDataURL("image/jpeg"); // Base64エンコード
-
-    ws.value.send(JSON.stringify({ image: imageData })); // JSON形式で送信
-
-    requestAnimationFrame(sendFrame);
-  };
-
-  sendFrame();
-};
-
-onMounted(getCameraDevices);
-onUnmounted(() => {
-  if (ws.value) {
-    ws.value.close();
+    isPlaying.value = false;
   }
+};
+
+// 動画終了時に全画面を閉じる
+const handleVideoEnded = () => {
+  exitFullscreen();
+};
+
+// 全画面を解除する関数
+const exitFullscreen = () => {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  }
+  isPlaying.value = false;
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
 });
 </script>
 
 <template>
-  <div class="camera">
-    <p>
-      カメラ:
-      <select v-model="selectedVideo" @change="connectLocalCamera">
-        <option disabled value="">Please select one</option>
-        <option v-for="video in videos" :key="video.value" :value="video.value">
-          {{ video.text }}
-        </option>
-      </select>
-    </p>
-    <video ref="videoElement" muted autoplay playsinline></video>
-    <canvas ref="canvasElement" width="640" height="480" style="display: none"></canvas>
-    <p>加工済み映像:</p>
-    <img ref="processedImage" />
+  <div id="app">
+    <router-view/>
+  </div>
+  <div v-if="isPlaying">
+    <video ref="videoRef" class="fullscreen-video" @ended="handleVideoEnded">
+      <source src="@/assets/movie/mp4/shutter_unClear.mp4" type="video/mp4">
+      お使いのブラウザは動画タグをサポートしていません。
+    </video>
   </div>
 </template>
 
 <style scoped>
-.camera {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-video {
-  width: 640px;
-  height: 480px;
-  border: 1px solid black;
+.fullscreen-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  background: black;
 }
 </style>
