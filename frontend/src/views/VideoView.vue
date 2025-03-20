@@ -120,7 +120,7 @@ onUnmounted(() => {
     <div style="position: relative;">
       <video ref="videoElement" muted autoplay playsinline style="width: 1920px; height: 1080px;">
       </video>
-      <img src="../image/toyonon_01.png" alt="Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
+      <img src="../../image/toyonon_05.png" alt="Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
     </div>
 
     <canvas ref="canvasElement" width="640" height="480" style="display: none"></canvas>
