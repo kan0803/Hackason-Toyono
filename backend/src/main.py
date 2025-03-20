@@ -1,131 +1,63 @@
 import cv2
-import base64
 import numpy as np
-import os
 import json
+import base64
+import time
 from fastapi import FastAPI, WebSocket
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# 手の肌色部分を抽出
+def get_skin_mask(frame):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    lower_skin = np.array([0, 20, 70], dtype=np.uint8)
+    upper_skin = np.array([20, 255, 255], dtype=np.uint8)
+    mask = cv2.inRange(hsv, lower_skin, upper_skin)
+    return mask
 
-# 透過AVIファイルの読み込み
-shutter_avi = "movie/avi/shutter_clear.avi"
-shutter = cv2.VideoCapture(shutter_avi)
+# すべての手の輪郭を取得
+def find_hand_contours(mask):
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    return [c for c in contours if cv2.contourArea(c) > 2000]  # 小さすぎる領域は無視
 
-# tonoyon画像の読み込み
-toyonon_img = cv2.imread("src/image/toyonon_flame01.png", cv2.IMREAD_UNCHANGED)
+# 指の本数から形状を判断（ピースの精度を向上）
+def detect_fingers(frame, contour):
+    hull = cv2.convexHull(contour, returnPoints=False)
+    if len(hull) < 3:
+        return "Unknown"
 
-# 読み込み確認
-if toyonon_img is None:
-    print("画像の読み込みに失敗")
-else:
-    print(f"画像のサイズ: {toyonon_img.shape}")  # (高さ, 幅, チャンネル数)
+    try:
+        defects = cv2.convexityDefects(contour, hull)
+        if defects is None:
+            return "Rock"
 
-#画像表示
-def overlay_image(frame, overlay, position):
-    """フレームの指定位置に透過PNGを重ねる"""
-    if overlay is None:
-        print("エラー: overlay が None")
-        return frame
+        finger_count = 0
+        for i in range(defects.shape[0]):
+            s, e, f, d = defects[i, 0]
+            far = tuple(contour[f][0])
 
-    h, w, _ = frame.shape
-    oh, ow, oc = overlay.shape
+            # 距離が一定以上の凹みを指と判定（閾値調整）
+            if d > 8000:  
+                finger_count += 1
+                cv2.circle(frame, far, 5, [0, 0, 255], -1)  
 
-    print(f"フレームサイズ: {h}x{w}, オーバーレイサイズ: {oh}x{ow}, チャンネル数: {oc}")
-
-    if oc < 4:
-        print("透過情報なし")
-        return frame
-
-    # ROI（対象領域）を取得
-    x1, y1 = position
-    x2, y2 = x1 + ow, y1 + oh
-
-    # 画像サイズを超えないようにする
-    x1, x2 = max(0, x1), min(w, x2)
-    y1, y2 = max(0, y1), min(h, y2)
-
-    print(f"貼り付け位置: ({x1}, {y1}) - ({x2}, {y2})")
-
-    roi = frame[y1:y2, x1:x2]
-
-    # アルファチャンネルを 0~1 に正規化
-    alpha = overlay[:y2 - y1, :x2 - x1, 3].astype(np.float32) / 255.0
-    overlay_rgb = overlay[:y2 - y1, :x2 - x1, :3].astype(np.float32)
-
-    # 透過合成
-    for c in range(3):  
-        roi[:, :, c] = (1 - alpha) * roi[:, :, c].astype(np.float32) + alpha * overlay_rgb[:, :, c]
-
-    # 合成結果を uint8 に変換
-    frame[y1:y2, x1:x2] = roi.astype(np.uint8)
-
-    return frame
-
-
-# 手の形(ピース)検出関数
-def detect_peace_sign(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (5, 5), 0)
-    _, thresh = cv2.threshold(blur, 60, 255, cv2.THRESH_BINARY_INV)
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    for cnt in contours:
-        if len(cnt) < 5:  # ConvexityDefectsの計算には5点以上が必要
-            continue
-
-        hull = cv2.convexHull(cnt, returnPoints=False)
-
-        if hull.shape[0] < 4:
-            continue  # hullの点が少なすぎる場合はスキップ
-        
-        defects = cv2.convexityDefects(cnt, hull)
-        if defects is not None and len(defects) == 2:
-            return True, cnt  # ピースサイン検出
-    return False, None
-
-def detect_hand_sign(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (5, 5), 0)
-    _, thresh = cv2.threshold(blur, 60, 255, cv2.THRESH_BINARY_INV)
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    for cnt in contours:
-        if len(cnt) < 5:
-            continue
-
-        hull = cv2.convexHull(cnt, returnPoints=False)
-
-        if hull.shape[0] < 4:
-            continue
-        
-        defects = cv2.convexityDefects(cnt, hull)
-
-        if defects is not None:
-            defect_count = len(defects)
-            if defect_count == 2:
-                return "Peace", cnt  # ピースサイン
-            elif defect_count == 0:
-                return "Fist", cnt  # グー
-            elif defect_count == 1:
-                return "Scissors", cnt  # チョキ
-            elif defect_count > 2:
-                return "Open Hand", cnt  # パー
-    
-    return "No Hand", None  # 手形が見つからない場合
+        if finger_count >= 4:
+            return "Paper"
+        elif 1 <= finger_count <= 2:  # Scissors の判定を緩和
+            return "Scissors"
+        else:
+            return "Rock"
+    except cv2.error as e:
+        print(f"OpenCV Error: {e}")
+        return "Unknown"
 
 @app.websocket("/video_feed")
 async def video_feed(websocket: WebSocket):
     await websocket.accept()
-    print("WebSocket connection opened")
+    print("WebSocket接続成功")
+
+    last_sent_time = time.time()
+    frame_buffer = None  
 
     try:
         while True:
@@ -135,21 +67,42 @@ async def video_feed(websocket: WebSocket):
                 if "image" not in data:
                     continue
 
-                img_data = base64.b64decode(data["image"].split(',')[1])  
+                img_data = base64.b64decode(data["image"].split(',')[1])
                 np_array = np.frombuffer(img_data, dtype=np.uint8)
                 frame = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
 
                 if frame is not None:
-                    hand_sign, contour = detect_hand_sign(frame)
+                    frame_buffer = frame  
+
+                # 5秒ごとに判定
+                if time.time() - last_sent_time >= 1 and frame_buffer is not None:
+                    skin_mask = get_skin_mask(frame_buffer)
+                    hand_contours = find_hand_contours(skin_mask)
+
+                    if len(hand_contours) == 0:
+                        hand_shape = "Unknown"
+                    elif len(hand_contours) == 1:
+                        hand_shape = detect_fingers(frame_buffer, hand_contours[0])
+                    else:
+                        # 複数の手がある場合、すべての手の形状を取得
+                        detected_shapes = [detect_fingers(frame_buffer, c) for c in hand_contours]
+                        if all(shape == detected_shapes[0] for shape in detected_shapes):
+                            hand_shape = detected_shapes[0]  
+                        else:
+                            hand_shape = "Unknown"  
 
                     # 判定結果を送信
-                    response = json.dumps({"hand_sign": hand_sign})
+                    response = json.dumps({"hand_sign": hand_shape})
                     await websocket.send_text(response)
+                    last_sent_time = time.time()
+
             except Exception as e:
                 print(f"エラー: {e}")
+
     finally:
-        print("WebSocket connection closed")
+        print("WebSocket接続終了")
         await websocket.close()
+
 
 # @app.websocket("/video_gray")
 # async def video_gray(websocket: WebSocket):
