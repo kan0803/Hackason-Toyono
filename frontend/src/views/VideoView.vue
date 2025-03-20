@@ -134,7 +134,7 @@ onUnmounted(() => {
         </option>
       </select>
     </p>
-    <div style="position: relative;">
+    <div style="display: flex; justify-content: center; position: relative;">
       <video ref="videoElement" muted autoplay playsinline style="width: 1920px; height: 1080px;">
       </video>
       <img v-if="handSignText === 'Unknown'" src="../../image/toyonon_flame01.png" alt="Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">

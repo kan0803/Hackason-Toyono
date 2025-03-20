@@ -44,7 +44,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div id="app">
+  <div>
     <router-view/>
   </div>
   <div v-if="isPlaying">
