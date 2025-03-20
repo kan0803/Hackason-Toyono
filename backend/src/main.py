@@ -3,7 +3,7 @@ import base64
 import numpy as np
 import os
 import json
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -32,11 +32,11 @@ def get_image():
         image = f.read()
     return {"image": base64.b64encode(image).decode('utf-8')}
 
-@app.post("/post_image")
-def post_image(image: str):
+@app.post("/upload_image/")
+async def upload_image(file: UploadFile = File(...)):
     image_path = "/app/captureImage/capture.png"
     with open(image_path, "wb") as f:
-        f.write(base64.b64decode(image.split(',')[1]))
+        f.write(await file.read())
     return {"message": "success"}
 
 @app.websocket("/video_feed")
