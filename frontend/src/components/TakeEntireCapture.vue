@@ -32,4 +32,8 @@ export const takeEntireCapture = async () => {
     console.error("Screen capture error: ", error);
   }
 };
+
+export default {
+  name: 'TakeEntireCapture'
+};
 </script>

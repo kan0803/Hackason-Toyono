@@ -110,16 +110,21 @@ const startStreaming = () => {
   sendFrame();
 };
 
-onMounted(getCameraDevices);
+onMounted(() => {
+  getCameraDevices();
+  document.addEventListener('keydown', handleKeydown);
+});
+
 onUnmounted(() => {
   if (ws.value) {
     ws.value.close();
   }
+  document.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
 <template>
-  <div class="camera">
+  <div class="camera" tabindex="0">
     <p>
       カメラ:
       <select v-model="selectedVideo" @change="connectLocalCamera">
