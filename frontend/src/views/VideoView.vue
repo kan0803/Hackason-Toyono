@@ -1,12 +1,22 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
+import { takeEntireCapture } from '@/components/TakeEntireCapture.vue';
 
 const videos = ref<{ text: string; value: string }[]>([]);
 const selectedVideo = ref('');
 const videoElement = ref<HTMLVideoElement | null>(null);
 const canvasElement = ref<HTMLCanvasElement | null>(null);
 const processedImage = ref<HTMLImageElement | null>(null);
+const handSignText = ref('');
 const ws = ref<WebSocket | null>(null);
+
+// エンターキーが押下されたら、画面全体のキャプチャを取得
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    console.log("Enterキーが押下されました");
+    takeEntireCapture();
+  }
+};
 
 const getCameraDevices = async () => {
   try {
@@ -54,19 +64,21 @@ const startWebSocket = () => {
   ws.value.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      if (data.image && processedImage.value) {
-        processedImage.value.src = data.image; // `<img>` に表示
+
+      // 画像データを受け取る場合
+      //if (data.image && processedImage.value) {
+      //  processedImage.value.src = data.image; // `<img>` に表示
+      //}
+
+      // 手の形（hand_sign）を受け取る場合
+      if (data.hand_sign) {
+        console.log(`検出された手の形: ${data.hand_sign}`);
+        // 例えば、手の形を表示するUIに反映させる
+        handSignText.value = data.hand_sign; // 手の形を表示するための変数
       }
     } catch (error) {
       console.error("受信データの解析エラー: ", error);
     }
-    // try {
-    //   const data = JSON.parse(event.data); // ここで JSON.parse を適用
-    //     const imageSrc = `data:image/jpeg;base64,${data.image}`;
-    //     document.getElementById("webcam-feed").src = imageSrc;
-    // } catch (error) {
-    //     console.error("受信データの解析エラー:", error);
-    // }
   };
 
   ws.value.onerror = (error) => {
@@ -98,64 +110,21 @@ const startStreaming = () => {
   sendFrame();
 };
 
-onMounted(getCameraDevices);
+onMounted(() => {
+  getCameraDevices();
+  document.addEventListener('keydown', handleKeydown);
+});
+
 onUnmounted(() => {
   if (ws.value) {
     ws.value.close();
   }
-});
-
-const videoRef = ref<HTMLVideoElement | null>(null);
-const isPlaying = ref(false);
-
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Enter' && !isPlaying.value) {
-    isPlaying.value = true;
-    nextTick(() => {
-      if (videoRef.value) {
-        videoRef.value.requestFullscreen?.(); // オプショナルチェーンで安全に呼び出す
-        videoRef.value.play();
-      }
-    });
-  } else if (event.key === 'Escape' && isPlaying.value) {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    }
-    isPlaying.value = false;
-  }
-};
-// 動画終了時に全画面を閉じる
-const handleVideoEnded = () => {
-  exitFullscreen();
-};
-// 全画面を解除する関数
-const exitFullscreen = () => {
-  if (document.fullscreenElement) {
-    document.exitFullscreen();
-  }
-  isPlaying.value = false;
-};
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown);
+  document.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
 <template>
-  <div id="app">
-    <router-view/>
-  </div>
-  <div v-if="isPlaying">
-    <video ref="videoRef" class="fullscreen-video" @ended="handleVideoEnded">
-      <source src="../movie/mp4/shutter_unClear.mp4" type="video/mp4">
-      お使いのブラウザは動画タグをサポートしていません。
-    </video>
-  </div>
-  <div class="camera">
+  <div class="camera" tabindex="0">
     <p>
       カメラ:
       <select v-model="selectedVideo" @change="connectLocalCamera">
@@ -165,10 +134,16 @@ onUnmounted(() => {
         </option>
       </select>
     </p>
-    <video ref="videoElement" muted autoplay playsinline></video>
+    <div style="position: relative;">
+      <video ref="videoElement" muted autoplay playsinline style="width: 1920px; height: 1080px;">
+      </video>
+      <img v-if="handSignText === 'Unknown'" src="../../image/toyonon_flame01.png" alt="Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
+      <img v-else-if="handSignText === 'Scissors'" src="../../image/toyonon_01.png" alt="Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
+      <img v-else-if="handSignText === 'Rock'" src="../../image/toyonon_02.png" alt="Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
+      <img v-else-if="handSignText === 'Paper'" src="../../image/toyonon_03.png" alt="Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
+    </div>
     <canvas ref="canvasElement" width="640" height="480" style="display: none"></canvas>
-    <p>加工済み映像:</p>
-    <img ref="processedImage" />
+    <p>現在の手の形: {{ handSignText }}</p>
   </div>
 </template>
 
@@ -179,18 +154,7 @@ onUnmounted(() => {
   align-items: center;
 }
 video {
-  width: 640px;
-  height: 480px;
-  border: 1px solid black;
-}
-
-.fullscreen-video {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  background: black;
+  width: 1920px;
+  height: 1080px;
 }
 </style>
