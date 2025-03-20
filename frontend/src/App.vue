@@ -124,6 +124,17 @@ const handleKeyDown = (event: KeyboardEvent) => {
     isPlaying.value = false;
   }
 };
+// 動画終了時に全画面を閉じる
+const handleVideoEnded = () => {
+  exitFullscreen();
+};
+// 全画面を解除する関数
+const exitFullscreen = () => {
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
+  }
+  isPlaying.value = false;
+};
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
@@ -136,7 +147,7 @@ onUnmounted(() => {
 
 <template>
   <div>
-    <video v-if="isPlaying" ref="videoRef" class="fullscreen-video">
+    <video v-if="isPlaying" ref="videoRef" class="fullscreen-video" @ended="handleVideoEnded">
       <source src="../movie/mp4/shutter_unClear.mp4" type="video/mp4">
       お使いのブラウザは動画タグをサポートしていません。
     </video>
