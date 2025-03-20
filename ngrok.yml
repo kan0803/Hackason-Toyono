@@ -4,6 +4,6 @@ agent:
 tunnels:
   nginx:
     proto: http
-    addr: frontend:8080 #ここに接続したいサービス
+    addr: frontend-prod:8080 #ここに接続したいサービス
     host_header: rewrite
 

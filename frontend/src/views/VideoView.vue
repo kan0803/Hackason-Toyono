@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import { takeEntireCapture } from '@/components/TakeEntireCapture.vue';
 
 const videos = ref<{ text: string; value: string }[]>([]);
 const selectedVideo = ref('');
@@ -8,6 +9,14 @@ const canvasElement = ref<HTMLCanvasElement | null>(null);
 const processedImage = ref<HTMLImageElement | null>(null);
 const handSignText = ref('');
 const ws = ref<WebSocket | null>(null);
+
+// エンターキーが押下されたら、画面全体のキャプチャを取得
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    console.log("Enterキーが押下されました");
+    takeEntireCapture();
+  }
+};
 
 const getCameraDevices = async () => {
   try {
@@ -101,16 +110,21 @@ const startStreaming = () => {
   sendFrame();
 };
 
-onMounted(getCameraDevices);
+onMounted(() => {
+  getCameraDevices();
+  document.addEventListener('keydown', handleKeydown);
+});
+
 onUnmounted(() => {
   if (ws.value) {
     ws.value.close();
   }
+  document.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
 <template>
-  <div class="camera">
+  <div class="camera" tabindex="0">
     <p>
       カメラ:
       <select v-model="selectedVideo" @change="connectLocalCamera">

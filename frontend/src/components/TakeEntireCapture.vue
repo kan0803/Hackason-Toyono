@@ -1,19 +1,16 @@
 <!-- アプリの画面全体のキャプチャとバックエンドへのアップロード -->
-<template>
-  <div>
-    <button @click="takeEntireCapture">Take Entire Capture</button>
-  </div>
-</template>
+<template></template>
 
-<script setup lang="ts">
-import { ref } from 'vue';
+<script lang="ts">
 import html2canvas from 'html2canvas';
 import axios from 'axios';
 
-const takeEntireCapture = async () => {
+// 画面全体のキャプチャを取得する関数
+export const takeEntireCapture = async () => {
+  console.log("takeEntireCapture");
   try {
     const canvas = await html2canvas(document.body, {
-      ignoreElements: (element) => {
+      ignoreElements: (element: Element) => {
         // 特定の要素を無視する
         return element.tagName === 'SCRIPT' || element.tagName === 'LINK';
       }
@@ -22,6 +19,7 @@ const takeEntireCapture = async () => {
     const blob = await (await fetch(dataUrl)).blob();
     const formData = new FormData();
     formData.append('file', blob, 'capture.png');
+    console.log("Image has been captured");
     // バックエンドに画像をアップロード
     await axios.post('http://localhost:8000/upload_image/', formData, {
       headers: {
@@ -33,5 +31,9 @@ const takeEntireCapture = async () => {
   } catch (error) {
     console.error("Screen capture error: ", error);
   }
+};
+
+export default {
+  name: 'TakeEntireCapture'
 };
 </script>
