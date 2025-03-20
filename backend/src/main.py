@@ -1,11 +1,22 @@
 import cv2
 import numpy as np
+import os
 import json
 import base64
 import time
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+# CORS設定
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 手の肌色部分を抽出
 def get_skin_mask(frame):
@@ -50,6 +61,29 @@ def detect_fingers(frame, contour):
     except cv2.error as e:
         print(f"OpenCV Error: {e}")
         return "Unknown"
+
+
+# ディレクトリが存在しない場合は作成
+if not os.path.exists("/app/captureImage"):
+    print("Create directory: /app/captureImage")
+    os.makedirs("/app/captureImage")
+
+
+@app.get("/get_image")
+def get_image():
+    image_path = "/app/captureImage/capture.png"
+    if not os.path.exists(image_path):
+        return {"error": "File not found"}
+    with open(image_path, "rb") as f:
+        image = f.read()
+    return {"image": base64.b64encode(image).decode('utf-8')}
+
+@app.post("/upload_image/")
+async def upload_image(file: UploadFile = File(...)):
+    image_path = "/app/captureImage/capture.png"
+    with open(image_path, "wb") as f:
+        f.write(await file.read())
+    return {"message": "success"}
 
 @app.websocket("/video_feed")
 async def video_feed(websocket: WebSocket):

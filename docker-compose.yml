@@ -5,11 +5,30 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/src:/app/src
+      - ./backend/captureImage:/app/captureImage
     tty: true
     stdin_open: true
     restart: always
+  # 開発用
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    tty: true
+    stdin_open: true
+    restart: always
+    depends_on:
+      - backend
+  # 本番用
+  frontend-prod:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
     ports:
       - "8080:8080"
     tty: true
@@ -17,3 +36,16 @@ services:
     restart: always
     depends_on:
       - backend
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command:
+      - "start"
+      - "--all"
+      - "--config"
+      - "/etc/ngrok.yml"
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    ports:
+      - 4040:4040
