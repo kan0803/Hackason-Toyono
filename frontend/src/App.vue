@@ -41,45 +41,6 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
 });
-
-const videoRef = ref<HTMLVideoElement | null>(null);
-const isPlaying = ref(false);
-
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Enter' && !isPlaying.value) {
-    isPlaying.value = true;
-    nextTick(() => {
-      if (videoRef.value) {
-        videoRef.value.requestFullscreen?.(); // オプショナルチェーンで安全に呼び出す
-        videoRef.value.play();
-      }
-    });
-  } else if (event.key === 'Escape' && isPlaying.value) {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    }
-    isPlaying.value = false;
-  }
-};
-// 動画終了時に全画面を閉じる
-const handleVideoEnded = () => {
-  exitFullscreen();
-};
-// 全画面を解除する関数
-const exitFullscreen = () => {
-  if (document.fullscreenElement) {
-    document.exitFullscreen();
-  }
-  isPlaying.value = false;
-};
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown);
-});
 </script>
 
 <template>
@@ -88,30 +49,9 @@ onUnmounted(() => {
   </div>
   <div v-if="isPlaying">
     <video ref="videoRef" class="fullscreen-video" @ended="handleVideoEnded">
-<<<<<<< HEAD
       <source src="@/assets/movie/mp4/shutter_unClear.mp4" type="video/mp4">
       お使いのブラウザは動画タグをサポートしていません。
     </video>
-=======
-      <source src="../movie/mp4/shutter_unClear.mp4" type="video/mp4">
-      お使いのブラウザは動画タグをサポートしていません。
-    </video>
-  </div>
-  <div class="camera">
-    <p>
-      カメラ:
-      <select v-model="selectedVideo" @change="connectLocalCamera">
-        <option disabled value="">Please select one</option>
-        <option v-for="video in videos" :key="video.value" :value="video.value">
-          {{ video.text }}
-        </option>
-      </select>
-    </p>
-    <video ref="videoElement" muted autoplay playsinline></video>
-    <canvas ref="canvasElement" width="640" height="480" style="display: none"></canvas>
-    <p>加工済み映像:</p>
-    <img ref="processedImage" />
->>>>>>> refs/remotes/origin/main
   </div>
 </template>
 
@@ -125,23 +65,4 @@ onUnmounted(() => {
   object-fit: cover;
   background: black;
 }
-<<<<<<< HEAD
 </style>
-=======
-video {
-  width: 640px;
-  height: 480px;
-  border: 1px solid black;
-}
-
-.fullscreen-video {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  background: black;
-}
-</style>
->>>>>>> refs/remotes/origin/main
