@@ -49,7 +49,7 @@ onUnmounted(() => {
   </div>
   <div v-if="isPlaying">
     <video ref="videoRef" class="fullscreen-video" @ended="handleVideoEnded">
-      <source src="@/assets/movie/mp4/shutter_unClear.mp4" type="video/mp4">
+      <source src="../src/movie/mp4/shutter_unClear.mp4" type="video/mp4">
       お使いのブラウザは動画タグをサポートしていません。
     </video>
   </div>
