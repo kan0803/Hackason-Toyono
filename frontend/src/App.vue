@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { takeEntireCapture } from '@/components/TakeEntireCapture.vue';
 
 const videoRef = ref<HTMLVideoElement | null>(null);
 const isPlaying = ref(false);
@@ -9,28 +10,22 @@ const handleKeyDown = (event: KeyboardEvent) => {
     isPlaying.value = true;
     nextTick(() => {
       if (videoRef.value) {
-        videoRef.value.requestFullscreen?.(); // オプショナルチェーンで安全に呼び出す
         videoRef.value.play();
       }
     });
   } else if (event.key === 'Escape' && isPlaying.value) {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    }
-    isPlaying.value = false;
+    exitVideo();
   }
 };
 
-// 動画終了時に全画面を閉じる
+// 動画終了時に再生状態を解除
 const handleVideoEnded = () => {
-  exitFullscreen();
+  exitVideo();
+  takeEntireCapture();
 };
 
-// 全画面を解除する関数
-const exitFullscreen = () => {
-  if (document.fullscreenElement) {
-    document.exitFullscreen();
-  }
+// 再生状態を解除する関数
+const exitVideo = () => {
   isPlaying.value = false;
 };
 
@@ -44,11 +39,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div id="app">
+  <div>
     <router-view/>
   </div>
-  <div v-if="isPlaying">
-    <video ref="videoRef" class="fullscreen-video" @ended="handleVideoEnded">
+  <div v-if="isPlaying" class="video-container">
+    <video ref="videoRef" class="window-video" @ended="handleVideoEnded" >
       <source src="../src/movie/mp4/shutter_unClear.mp4" type="video/mp4">
       お使いのブラウザは動画タグをサポートしていません。
     </video>
@@ -56,13 +51,20 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.fullscreen-video {
-  position: fixed;
+.video-container {
+  position: absolute; /* 全画面ではなくウィンドウサイズに配置 */
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  background: black;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* クリックをブロックしない */
+}
+
+.window-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* アスペクト比を維持しつつフィット */
+  opacity: 0.5; /* 透過度調整（0.0〜1.0） */
+  background: transparent;
 }
 </style>

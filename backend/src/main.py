@@ -4,9 +4,10 @@ import os
 import json
 import base64
 import time
-from fastapi import FastAPI, WebSocket, UploadFile, File
+from fastapi import FastAPI, WebSocket, UploadFile, File, responses, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from .modules.face_detector import FaceDetector
 
 app = FastAPI()
 
@@ -18,6 +19,100 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ディレクトリが存在しない場合は作成
+if not os.path.exists("/app/captureImage"):
+    print("Create directory: /app/captureImage")
+    os.makedirs("/app/captureImage")
+
+
+@app.get("/get_image")
+def get_image():
+    image_path = "/app/captureImage/capture.png"
+    if not os.path.exists(image_path):
+        return {"error": "File not found"}
+    with open(image_path, "rb") as f:
+        image = f.read()
+    return {"image": base64.b64encode(image).decode('utf-8')}
+
+def delete_file(path: str):
+    os.remove(path)
+
+@app.get('/download-image')
+async def download(background_tasks: BackgroundTasks):
+    file_path = './captureImage/capture.png'
+    background_tasks.add_task(delete_file, file_path)
+    return responses.FileResponse(file_path, filename='toyonon-pickture.png')
+
+@app.post("/upload_image/")
+async def upload_image(file: UploadFile = File(...)):
+    image_path = "/app/captureImage/capture.png"
+    with open(image_path, "wb") as f:
+        f.write(await file.read())
+    return {"message": "success"}
+
+@app.websocket("/video_feed")
+async def video_feed(websocket: WebSocket):
+    await websocket.accept()
+    print("WebSocket接続成功")
+
+    last_sent_time = time.time()
+    frame_buffer = None  
+
+    try:
+        while True:
+            received_data = await websocket.receive_text()
+            try:
+                data = json.loads(received_data)
+                if "image" not in data:
+                    continue
+
+                img_data = base64.b64decode(data["image"].split(',')[1])
+                np_array = np.frombuffer(img_data, dtype=np.uint8)
+                frame = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+                
+                if frame is not None:
+                    frame_buffer = frame  
+
+                # 1秒ごとに判定
+                if time.time() - last_sent_time >= 1 and frame_buffer is not None:
+                    skin_mask = get_skin_mask(frame_buffer)
+                    hand_contours = find_hand_contours(skin_mask)
+
+                    if len(hand_contours) == 0:
+                        hand_shape = "Unknown"
+                    elif len(hand_contours) == 1:
+                        hand_shape = detect_fingers(frame_buffer, hand_contours[0])
+                    else:
+                        # 複数の手がある場合、すべての手の形状を取得
+                        detected_shapes = [detect_fingers(frame_buffer, c) for c in hand_contours]
+                        if all(shape == detected_shapes[0] for shape in detected_shapes):
+                            hand_shape = detected_shapes[0]  
+                        else:
+                            hand_shape = "Unknown"  
+
+                    # 顔検出
+                    face_coordinates = FaceDetector.detect_face(frame_buffer)
+                    face_detected = len(face_coordinates)
+
+                    # 判定結果を送信
+                    response = json.dumps({
+                        "hand_sign": hand_shape,
+                        "face_detected": face_detected,
+                    })
+                    await websocket.send_text(response)
+                    last_sent_time = time.time()
+
+            except Exception as e:
+                print(f"エラー: {e}")
+
+    finally:
+        print("WebSocket接続終了")
+        await websocket.close()
+
+@app.get("/test")
+def read_root():
+    return {"message": "Hello World"}
 
 # 手の肌色部分を抽出
 def get_skin_mask(frame):
@@ -62,85 +157,6 @@ def detect_fingers(frame, contour):
     except cv2.error as e:
         print(f"OpenCV Error: {e}")
         return "Unknown"
-
-
-# ディレクトリが存在しない場合は作成
-if not os.path.exists("/app/captureImage"):
-    print("Create directory: /app/captureImage")
-    os.makedirs("/app/captureImage")
-
-
-@app.get("/get_image")
-def get_image():
-    image_path = "/app/captureImage/capture.png"
-    if not os.path.exists(image_path):
-        return {"error": "File not found"}
-    with open(image_path, "rb") as f:
-        image = f.read()
-    return {"image": base64.b64encode(image).decode('utf-8')}
-
-@app.post("/upload_image/")
-async def upload_image(file: UploadFile = File(...)):
-    image_path = "/app/captureImage/capture.png"
-    with open(image_path, "wb") as f:
-        f.write(await file.read())
-    return {"message": "success"}
-
-@app.websocket("/video_feed")
-async def video_feed(websocket: WebSocket):
-    await websocket.accept()
-    print("WebSocket接続成功")
-
-    last_sent_time = time.time()
-    frame_buffer = None  
-
-    try:
-        while True:
-            received_data = await websocket.receive_text()
-            try:
-                data = json.loads(received_data)
-                if "image" not in data:
-                    continue
-
-                img_data = base64.b64decode(data["image"].split(',')[1])
-                np_array = np.frombuffer(img_data, dtype=np.uint8)
-                frame = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-
-                if frame is not None:
-                    frame_buffer = frame  
-
-                # 5秒ごとに判定
-                if time.time() - last_sent_time >= 1 and frame_buffer is not None:
-                    skin_mask = get_skin_mask(frame_buffer)
-                    hand_contours = find_hand_contours(skin_mask)
-
-                    if len(hand_contours) == 0:
-                        hand_shape = "Unknown"
-                    elif len(hand_contours) == 1:
-                        hand_shape = detect_fingers(frame_buffer, hand_contours[0])
-                    else:
-                        # 複数の手がある場合、すべての手の形状を取得
-                        detected_shapes = [detect_fingers(frame_buffer, c) for c in hand_contours]
-                        if all(shape == detected_shapes[0] for shape in detected_shapes):
-                            hand_shape = detected_shapes[0]  
-                        else:
-                            hand_shape = "Unknown"  
-
-                    # 判定結果を送信
-                    response = json.dumps({"hand_sign": hand_shape})
-                    await websocket.send_text(response)
-                    last_sent_time = time.time()
-
-            except Exception as e:
-                print(f"エラー: {e}")
-
-    finally:
-        print("WebSocket接続終了")
-        await websocket.close()
-
-@app.get("/test")
-def read_root():
-    return {"message": "Hello World"}
 
 # ビルドしたファイルを配信
 app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
