@@ -12,6 +12,9 @@ export default defineConfig({
     vueJsx(),
     vueDevTools(),
   ],
+  build: {
+    outDir: './dist',
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -19,5 +22,5 @@ export default defineConfig({
   },
   server: {
     host: true
-  }
+  },
 })
