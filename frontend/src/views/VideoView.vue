@@ -135,12 +135,12 @@ onUnmounted(() => {
       </select>
     </p>
     <div style="display: flex; justify-content: center; position: relative;">
-      <video ref="videoElement" muted autoplay playsinline style="width: 1920px; height: 1080px;">
+      <video ref="videoElement" muted autoplay playsinline style="width: 100vw; height: 100vh;">
       </video>
-      <img v-if="handSignText === 'Unknown'" src="../../image/toyonon_flame01.png" alt="Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
-      <img v-else-if="handSignText === 'Scissors'" src="../../image/toyonon_01.png" alt="Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
-      <img v-else-if="handSignText === 'Rock'" src="../../image/toyonon_02.png" alt="Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
-      <img v-else-if="handSignText === 'Paper'" src="../../image/toyonon_03.png" alt="Overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
+      <img v-if="handSignText === 'Unknown'" src="../../image/toyonon_flame01.png" alt="Overlay" style="position: absolute; top: 50px; left: 0; width: 100%; height: auto; object-fit: cover; opacity: 0.5;">
+      <img v-else-if="handSignText === 'Scissors'" src="../../image/toyonon_01.png" alt="Overlay" style="position: absolute; top: 50px; left: 0; width: 100%; height: auto; object-fit: cover; opacity: 0.5;">
+      <img v-else-if="handSignText === 'Rock'" src="../../image/toyonon_02.png" alt="Overlay" style="position: absolute; top: 50px; left: 0; width: 100%; height: auto; object-fit: cover; opacity: 0.5;">
+      <img v-else-if="handSignText === 'Paper'" src="../../image/toyonon_03.png" alt="Overlay" style="position: absolute; top: 50px; left: 0; width: 100%; height: auto; object-fit: cover; opacity: 0.5;">
     </div>
     <canvas ref="canvasElement" width="640" height="480" style="display: none"></canvas>
     <p>現在の手の形: {{ handSignText }}</p>
