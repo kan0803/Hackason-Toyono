@@ -27,6 +27,13 @@ const handleVideoEnded = () => {
 // 再生状態を解除する関数
 const exitVideo = () => {
   isPlaying.value = false;
+  // 取得した要素を HTMLElement 型にキャスト
+const videoContainer = document.querySelector('.video-container') as HTMLElement;
+
+// キャプチャ前に video-container を隠す
+if (videoContainer) {
+  videoContainer.style.display = 'none';
+}
 };
 
 onMounted(() => {

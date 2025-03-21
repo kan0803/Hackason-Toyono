@@ -155,8 +155,6 @@ watch([faceDetectedNum, handSignText], ([newFaceDetectedNum, newHandSignText]) =
 
     </div>
     <canvas ref="canvasElement" width="640" height="480" style="display: none"></canvas>
-    <p>現在の手の形: {{ handSignText }}</p>
-    <p>顔検出: {{ faceDetectedNum }}</p>
   </div>
 </template>
 
