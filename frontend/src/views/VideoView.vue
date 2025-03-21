@@ -127,9 +127,9 @@ onUnmounted(() => {
 
       <!-- 顔検出・手の形状の状態に応じて表示する画像を変更 -->
       <img v-if="faceDetectedNum === '0'" src="@/assets/image/TynnWithFrame/toyonon_frame05.png" alt="顔未検出" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
-      <img v-else-if="faceDetectedNum === '1'" src="@/assets/image/TynnWithFrame/toyonon_frame04.png" alt="顔検出" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
-      <img v-else-if="faceDetectedNum >= '2'" src="@/assets/image/TynnWithFrame/toyonon_frame03.png" alt="顔複数検出" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
-      <img v-else-if="(handSignText === 'rock' || handSignText === 'paper' || handSignText === 'scissors') && faceDetectedNum !== '0'" src="@/assets/image/TynnWithFrame/toyonon_frame02.png" alt="手の形: rock" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+      <img v-else-if="faceDetectedNum === '1' && handSignText === 'Unknown'" src="@/assets/image/TynnWithFrame/toyonon_frame04.png" alt="顔検出" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+      <img v-else-if="faceDetectedNum >= '2' && handSignText === 'Unknown'" src="@/assets/image/TynnWithFrame/toyonon_frame03.png" alt="顔複数検出" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+      <img v-else-if="(handSignText === 'Rock' || handSignText === 'Paper' || handSignText === 'Scissors') && faceDetectedNum !== '0'" src="@/assets/image/TynnWithFrame/toyonon_frame02.png" alt="手の形: rock" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
       <img v-else src="@/assets/image/TynnWithFrame/toyonon_frame00.png" alt="初期画像" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
 
     </div>
