@@ -32,7 +32,7 @@ const saveImage = async () => {
 
 const getImage = async () => {
   try {
-    const response = await axios.get('http://localhost:8000/get_image/')
+    const response = await axios.get('/get_image/')
     image.value = `data:image/png;base64,${response.data.image}`
     console.log('画像取得成功')
   } catch (error) {

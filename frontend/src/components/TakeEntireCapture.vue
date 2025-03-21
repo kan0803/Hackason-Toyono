@@ -21,7 +21,7 @@ export const takeEntireCapture = async () => {
     formData.append('file', blob, 'capture.png');
     console.log("Image has been captured");
     // バックエンドに画像をアップロード
-    await axios.post('http://localhost:8000/upload_image/', formData, {
+    await axios.post('/upload_image/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

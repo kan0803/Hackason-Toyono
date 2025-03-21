@@ -46,6 +46,7 @@ async def download(background_tasks: BackgroundTasks):
 
 @app.post("/upload_image/")
 async def upload_image(file: UploadFile = File(...)):
+    print("Upload image")
     image_path = "/app/captureImage/capture.png"
     with open(image_path, "wb") as f:
         f.write(await file.read())
@@ -129,19 +130,24 @@ def find_hand_contours(mask):
 
 # 指の本数から形状を判断（ピースの精度を向上）
 def detect_fingers(frame, contour):
-    hull = cv2.convexHull(contour, returnPoints=False)
+    # 輪郭を近似
+    epsilon = 0.01 * cv2.arcLength(contour, True)
+    approx = cv2.approxPolyDP(contour, epsilon, True)
+
+    # 近似された輪郭を使って凸包を計算
+    hull = cv2.convexHull(approx, returnPoints=False)
     if len(hull) < 3:
         return "Unknown"
 
     try:
-        defects = cv2.convexityDefects(contour, hull)
+        defects = cv2.convexityDefects(approx, hull)
         if defects is None:
             return "Rock"
 
         finger_count = 0
         for i in range(defects.shape[0]):
             s, e, f, d = defects[i, 0]
-            far = tuple(contour[f][0])
+            far = tuple(approx[f][0])
 
             # 距離が一定以上の凹みを指と判定（閾値調整）
             if d > 8000:  

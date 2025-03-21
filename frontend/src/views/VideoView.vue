@@ -5,7 +5,6 @@ import sound0 from '@/assets/soundeffect/effect01.mp3';
 import sound1 from '@/assets/soundeffect/effect02.mp3';
 import sound2 from '@/assets/soundeffect/effect03.mp3';
 
-
 const videos = ref<{ text: string; value: string }[]>([]);
 const selectedVideo = ref('');
 const videoElement = ref<HTMLVideoElement | null>(null);
@@ -93,7 +92,7 @@ const startWebSocket = () => {
 const startStreaming = () => {
   if (!canvasElement.value || !videoElement.value || !ws.value) return;
 
-  const ctx = canvasElement.value.getContext('2d');
+  const ctx = canvasElement.value.getContext('2d', { willReadFrequently: true });
   if (!ctx) return;
 
   const sendFrame = () => {
