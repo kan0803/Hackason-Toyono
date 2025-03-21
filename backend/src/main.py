@@ -4,7 +4,7 @@ import os
 import json
 import base64
 import time
-from fastapi import FastAPI, WebSocket, UploadFile, File, responses
+from fastapi import FastAPI, WebSocket, UploadFile, File, responses, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from .modules.face_detector import FaceDetector
 
@@ -34,9 +34,14 @@ def get_image():
         image = f.read()
     return {"image": base64.b64encode(image).decode('utf-8')}
 
+def delete_file(path: str):
+    os.remove(path)
+
 @app.get('/download-image')
-async def download():
-    return responses.FileResponse('./captureImage/capture.png',filename='toyonon-pickture.png')
+async def download(background_tasks: BackgroundTasks):
+    file_path = './captureImage/capture.png'
+    background_tasks.add_task(delete_file, file_path)
+    return responses.FileResponse(file_path, filename='toyonon-pickture.png')
 
 @app.post("/upload_image/")
 async def upload_image(file: UploadFile = File(...)):
@@ -104,7 +109,7 @@ async def video_feed(websocket: WebSocket):
         print("WebSocket接続終了")
         await websocket.close()
 
-@app.get("/")
+@app.get("/test")
 def read_root():
     return {"message": "Hello World"}
 
