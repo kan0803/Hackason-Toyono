@@ -6,6 +6,7 @@ import base64
 import time
 from fastapi import FastAPI, WebSocket, UploadFile, File, responses
 from fastapi.middleware.cors import CORSMiddleware
+from .modules.face_detector import FaceDetector
 
 app = FastAPI()
 
@@ -63,11 +64,11 @@ async def video_feed(websocket: WebSocket):
                 img_data = base64.b64decode(data["image"].split(',')[1])
                 np_array = np.frombuffer(img_data, dtype=np.uint8)
                 frame = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-
+                
                 if frame is not None:
                     frame_buffer = frame  
 
-                # 5秒ごとに判定
+                # 1秒ごとに判定
                 if time.time() - last_sent_time >= 1 and frame_buffer is not None:
                     skin_mask = get_skin_mask(frame_buffer)
                     hand_contours = find_hand_contours(skin_mask)
@@ -84,8 +85,15 @@ async def video_feed(websocket: WebSocket):
                         else:
                             hand_shape = "Unknown"  
 
+                    # 顔検出
+                    face_coordinates = FaceDetector.detect_face(frame_buffer)
+                    face_detected = len(face_coordinates)
+
                     # 判定結果を送信
-                    response = json.dumps({"hand_sign": hand_shape})
+                    response = json.dumps({
+                        "hand_sign": hand_shape,
+                        "face_detected": face_detected,
+                    })
                     await websocket.send_text(response)
                     last_sent_time = time.time()
 
@@ -95,50 +103,6 @@ async def video_feed(websocket: WebSocket):
     finally:
         print("WebSocket接続終了")
         await websocket.close()
-
-
-# @app.websocket("/video_gray")
-# async def video_gray(websocket: WebSocket):
-#     await websocket.accept()
-#     print("WebSocket connection opened")
-
-#     try:
-#         while True:
-#             received_data = await websocket.receive_text()  
-
-#             try:
-#                 # JSONとして解析
-#                 data = json.loads(received_data)
-#                 if "image" not in data:
-#                     print("受信データに 'image' キーがありません")
-#                     continue
-
-#                 # Base64データを抽出
-#                 img_data = base64.b64decode(data["image"].split(',')[1])  
-#                 np_array = np.frombuffer(img_data, dtype=np.uint8)
-#                 frame = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-
-#                 if frame is not None:
-#                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-#                     _, buffer = cv2.imencode('.jpg', gray)
-
-#                     processed_image = base64.b64encode(buffer).decode('utf-8')
-#                     response = json.dumps({"image": f"data:image/jpeg;base64,{processed_image}"})
-#                     await websocket.send_text(response)
-
-#             except json.JSONDecodeError:
-#                 print("JSONデコードエラー: 受信データが正しくありません")
-#             except Exception as e:
-#                 print(f"画像処理エラー: {e}")
-
-#     except Exception as e:
-#         print(f"エラー: {e}")
-
-#     finally:
-#         print("WebSocket connection closed")
-#         await websocket.close()
-
-
 
 @app.get("/")
 def read_root():

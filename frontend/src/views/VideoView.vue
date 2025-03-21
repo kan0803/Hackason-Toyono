@@ -7,6 +7,7 @@ const videoElement = ref<HTMLVideoElement | null>(null);
 const canvasElement = ref<HTMLCanvasElement | null>(null);
 const processedImage = ref<HTMLImageElement | null>(null);
 const handSignText = ref('');
+const faceDetectedNum = ref('');
 const ws = ref<WebSocket | null>(null);
 
 const getCameraDevices = async () => {
@@ -55,18 +56,15 @@ const startWebSocket = () => {
   ws.value.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-
-      // 画像データを受け取る場合
-      //if (data.image && processedImage.value) {
-      //  processedImage.value.src = data.image; // `<img>` に表示
-      //}
-
-      // 手の形（hand_sign）を受け取る場合
+      // 手の形（hand_sign）を受け取る
       if (data.hand_sign) {
         console.log(`検出された手の形: ${data.hand_sign}`);
         // 例えば、手の形を表示するUIに反映させる
         handSignText.value = data.hand_sign; // 手の形を表示するための変数
       }
+      // 顔検出の結果取得
+      faceDetectedNum.value = data.face_detected;
+      console.log(`顔検出: ${data.face_detected}`);
     } catch (error) {
       console.error("受信データの解析エラー: ", error);
     }
@@ -126,16 +124,18 @@ onUnmounted(() => {
     <div style="display: flex; justify-content: center; position: relative;">
       <video ref="videoElement" muted autoplay playsinline style="width: 100vw; height: 100vh;">
       </video>
-      <img v-if="handSignText === 'Unknown'" src="../../image/toyonon_flame01.png" alt="Overlay" style="position: absolute; top: 0; left: 150px; width: auto; height: 100%; object-fit: cover; opacity: 0.5
-      
-      
-      ;">
-      <img v-else-if="handSignText === 'Scissors'" src="../../image/toyonon_01.png" alt="Overlay" style="position: absolute; top: 0; left: 150px; width: auto; height: 100%; object-fit: cover; opacity: 0.5;">
-      <img v-else-if="handSignText === 'Rock'" src="../../image/toyonon_02.png" alt="Overlay" style="position: absolute; top: 0; left: 150px; width: auto; height: 100%; object-fit: cover; opacity: 0.5;">
-      <img v-else-if="handSignText === 'Paper'" src="../../image/toyonon_03.png" alt="Overlay" style="position: absolute; top: 0; left: 150px; width: auto; height: 100%; object-fit: cover; opacity: 0.5;">
+
+      <!-- 顔検出・手の形状の状態に応じて表示する画像を変更 -->
+      <img v-if="faceDetectedNum === '0'" src="@/assets/image/toyonon_03.png" alt="顔未検出" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+      <img v-else-if="faceDetectedNum === '1'" src="@/assets/image/toyonon_01.png" alt="顔検出" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+      <img v-else-if="faceDetectedNum >= '2'" src="@/assets/image/toyonon_04.png" alt="顔複数検出" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+      <img v-else-if="handSignText === 'rock' || 'paper' || 'scissors'" src="@/assets/image/toyonon_02.png" alt="手の形: rock" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+      <img v-else src="@/assets/image/toyonon_05.png" alt="初期画像" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+
     </div>
     <canvas ref="canvasElement" width="640" height="480" style="display: none"></canvas>
     <p>現在の手の形: {{ handSignText }}</p>
+    <p>顔検出: {{ faceDetectedNum }}</p>
   </div>
 </template>
 
