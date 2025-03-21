@@ -1,10 +1,20 @@
 @import './base.css';
 
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* 横スクロールを防ぐ */
+}
+
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  width: 100%;
+  height: 100%;
   font-weight: normal;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 a,
@@ -21,7 +31,7 @@ a,
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 768px) { /* 100% は単位として無効なので修正 */
   body {
     display: flex;
     place-items: center;
@@ -30,6 +40,6 @@ a,
   #app {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
+    max-width: 100vw; /* 横幅を制限 */
   }
 }
