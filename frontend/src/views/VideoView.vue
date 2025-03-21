@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+// 効果音ファイルのインポート
+import sound0 from '@/assets/soundeffect/effect01.mp3';
+import sound1 from '@/assets/soundeffect/effect02.mp3';
+import sound2 from '@/assets/soundeffect/effect03.mp3';
+
 
 const videos = ref<{ text: string; value: string }[]>([]);
 const selectedVideo = ref('');
@@ -9,6 +14,12 @@ const processedImage = ref<HTMLImageElement | null>(null);
 const handSignText = ref('');
 const faceDetectedNum = ref('');
 const ws = ref<WebSocket | null>(null);
+
+// 効果音の再生関数
+const playSound = (sound: string) => {
+  const audio = new Audio(sound);
+  audio.play();
+};
 
 const getCameraDevices = async () => {
   try {
@@ -106,6 +117,17 @@ onMounted(() => {
 onUnmounted(() => {
   if (ws.value) {
     ws.value.close();
+  }
+});
+
+// 効果音再生のためのウォッチャー
+watch([faceDetectedNum, handSignText], ([newFaceDetectedNum, newHandSignText]) => {
+  if (faceDetectedNum.value === '1' && handSignText.value === 'Unknown') {
+    playSound(sound0);
+  } else if (faceDetectedNum.value >= '2' && handSignText.value === 'Unknown') {
+    playSound(sound1);
+  } else if ((handSignText.value === 'Rock' || handSignText.value === 'Paper' || handSignText.value === 'Scissors') && faceDetectedNum.value !== '0') {
+    playSound(sound2);
   }
 });
 </script>
