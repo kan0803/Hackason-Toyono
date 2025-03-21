@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { takeEntireCapture } from '@/components/TakeEntireCapture.vue';
 
 const videoRef = ref<HTMLVideoElement | null>(null);
 const isPlaying = ref(false);
@@ -24,6 +25,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
 // 動画終了時に全画面を閉じる
 const handleVideoEnded = () => {
   exitFullscreen();
+  takeEntireCapture();
 };
 
 // 全画面を解除する関数
