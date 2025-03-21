@@ -4,7 +4,7 @@ import os
 import json
 import base64
 import time
-from fastapi import FastAPI, WebSocket, UploadFile, File
+from fastapi import FastAPI, WebSocket, UploadFile, File, responses
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -17,51 +17,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# 手の肌色部分を抽出
-def get_skin_mask(frame):
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    lower_skin = np.array([0, 20, 70], dtype=np.uint8)
-    upper_skin = np.array([20, 255, 255], dtype=np.uint8)
-    mask = cv2.inRange(hsv, lower_skin, upper_skin)
-    return mask
-
-# すべての手の輪郭を取得
-def find_hand_contours(mask):
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    return [c for c in contours if cv2.contourArea(c) > 2000]  # 小さすぎる領域は無視
-
-# 指の本数から形状を判断（ピースの精度を向上）
-def detect_fingers(frame, contour):
-    hull = cv2.convexHull(contour, returnPoints=False)
-    if len(hull) < 3:
-        return "Unknown"
-
-    try:
-        defects = cv2.convexityDefects(contour, hull)
-        if defects is None:
-            return "Rock"
-
-        finger_count = 0
-        for i in range(defects.shape[0]):
-            s, e, f, d = defects[i, 0]
-            far = tuple(contour[f][0])
-
-            # 距離が一定以上の凹みを指と判定（閾値調整）
-            if d > 8000:  
-                finger_count += 1
-                cv2.circle(frame, far, 5, [0, 0, 255], -1)  
-
-        if finger_count >= 4:
-            return "Paper"
-        elif 1 <= finger_count <= 2:  # Scissors の判定を緩和
-            return "Scissors"
-        else:
-            return "Rock"
-    except cv2.error as e:
-        print(f"OpenCV Error: {e}")
-        return "Unknown"
-
 
 # ディレクトリが存在しない場合は作成
 if not os.path.exists("/app/captureImage"):
@@ -77,6 +32,10 @@ def get_image():
     with open(image_path, "rb") as f:
         image = f.read()
     return {"image": base64.b64encode(image).decode('utf-8')}
+
+@app.get('/download-image')
+async def download():
+    return responses.FileResponse('./captureImage/capture.png',filename='toyonon-pickture.png')
 
 @app.post("/upload_image/")
 async def upload_image(file: UploadFile = File(...)):
@@ -184,3 +143,47 @@ async def video_feed(websocket: WebSocket):
 @app.get("/")
 def read_root():
     return {"message": "Hello World"}
+
+# 手の肌色部分を抽出
+def get_skin_mask(frame):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    lower_skin = np.array([0, 20, 70], dtype=np.uint8)
+    upper_skin = np.array([20, 255, 255], dtype=np.uint8)
+    mask = cv2.inRange(hsv, lower_skin, upper_skin)
+    return mask
+
+# すべての手の輪郭を取得
+def find_hand_contours(mask):
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    return [c for c in contours if cv2.contourArea(c) > 2000]  # 小さすぎる領域は無視
+
+# 指の本数から形状を判断（ピースの精度を向上）
+def detect_fingers(frame, contour):
+    hull = cv2.convexHull(contour, returnPoints=False)
+    if len(hull) < 3:
+        return "Unknown"
+
+    try:
+        defects = cv2.convexityDefects(contour, hull)
+        if defects is None:
+            return "Rock"
+
+        finger_count = 0
+        for i in range(defects.shape[0]):
+            s, e, f, d = defects[i, 0]
+            far = tuple(contour[f][0])
+
+            # 距離が一定以上の凹みを指と判定（閾値調整）
+            if d > 8000:  
+                finger_count += 1
+                cv2.circle(frame, far, 5, [0, 0, 255], -1)  
+
+        if finger_count >= 4:
+            return "Paper"
+        elif 1 <= finger_count <= 2:  # Scissors の判定を緩和
+            return "Scissors"
+        else:
+            return "Rock"
+    except cv2.error as e:
+        print(f"OpenCV Error: {e}")
+        return "Unknown"
