@@ -19,11 +19,6 @@ const router = createRouter({
       // which is lazy-loaded when the route is visited.
       component: () => import('../views/AboutView.vue'),
     },
-    {
-      path: '/get-image',
-      name: 'get-image',
-      component: GetImageView,
-    },
   ],
 })
 

@@ -5,6 +5,7 @@ import json
 import base64
 import time
 from fastapi import FastAPI, WebSocket, UploadFile, File, responses, BackgroundTasks
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from .modules.face_detector import FaceDetector
 
@@ -156,3 +157,6 @@ def detect_fingers(frame, contour):
     except cv2.error as e:
         print(f"OpenCV Error: {e}")
         return "Unknown"
+
+# ビルドしたファイルを配信
+app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
